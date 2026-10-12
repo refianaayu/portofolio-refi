@@ -132,51 +132,62 @@ function initCounters() {
   const statNumbers = document.querySelectorAll('.stat-number');
   let hasAnimated = false;
 
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting && !hasAnimated) {
-        hasAnimated = true;
-        statNumbers.forEach(counter => {
-          const target = parseFloat(counter.getAttribute('data-target'));
-          const isDecimal = target % 1 !== 0;
-          const suffix = counter.getAttribute('data-suffix') || '';
-          const duration = 1800;
-          const startTime = performance.now();
+  function runCountersAnimation() {
+    if (hasAnimated) return;
+    hasAnimated = true;
+    statNumbers.forEach(counter => {
+      const target = parseFloat(counter.getAttribute('data-target'));
+      const isDecimal = target % 1 !== 0;
+      const suffix = counter.getAttribute('data-suffix') || '';
+      const duration = 1800;
+      const startTime = performance.now();
 
-          function updateCounter(currentTime) {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            // easeOutExpo
-            const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-            const currentVal = easeProgress * target;
+      function updateCounter(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // easeOutExpo
+        const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+        const currentVal = easeProgress * target;
 
-            if (isDecimal) {
-              counter.textContent = currentVal.toFixed(2) + suffix;
-            } else {
-              counter.textContent = Math.floor(currentVal) + suffix;
-            }
+        if (isDecimal) {
+          counter.textContent = currentVal.toFixed(2) + suffix;
+        } else {
+          counter.textContent = Math.floor(currentVal) + suffix;
+        }
 
-            if (progress < 1) {
-              requestAnimationFrame(updateCounter);
-            } else {
-              if (isDecimal) {
-                counter.textContent = target.toFixed(2) + suffix;
-              } else {
-                counter.textContent = target + suffix;
-              }
-            }
-          }
-
+        if (progress < 1) {
           requestAnimationFrame(updateCounter);
-        });
+        } else {
+          if (isDecimal) {
+            counter.textContent = target.toFixed(2) + suffix;
+          } else {
+            counter.textContent = target + suffix;
+          }
+        }
       }
+
+      requestAnimationFrame(updateCounter);
     });
-  }, { threshold: 0.3 });
+  }
 
   const statsSection = document.getElementById('statsSection');
-  if (statsSection) {
+  if (statsSection && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          runCountersAnimation();
+        }
+      });
+    }, { threshold: 0.1 });
     observer.observe(statsSection);
+  } else {
+    runCountersAnimation();
   }
+
+  // Fallback trigger
+  setTimeout(() => {
+    if (!hasAnimated) runCountersAnimation();
+  }, 1200);
 }
 
 /* 4. Skill Progress Bars Animation */
@@ -186,18 +197,27 @@ function initSkillBars() {
 
   if (!skillsSection || skillBars.length === 0) return;
 
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        skillBars.forEach(bar => {
-          const targetWidth = bar.getAttribute('data-width');
-          bar.style.width = targetWidth;
-        });
-      }
+  function fillBars() {
+    skillBars.forEach(bar => {
+      const targetWidth = bar.getAttribute('data-width');
+      bar.style.width = targetWidth;
     });
-  }, { threshold: 0.25 });
+  }
 
-  observer.observe(skillsSection);
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          fillBars();
+        }
+      });
+    }, { threshold: 0.1 });
+    observer.observe(skillsSection);
+  } else {
+    fillBars();
+  }
+
+  setTimeout(fillBars, 2500);
 }
 
 /* 5. Certificate & Resume Modals Data & Triggers */
